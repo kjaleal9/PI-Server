@@ -1,0 +1,35 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "Backend server for Production Integrator clone",
+  "main": "index.js",
+  "scripts": {
+    "start": "set PORT=5000 && nodemon src/server.js",
+    "test": "jest",
+    "test-watch": "jest --watchAll"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcrypt-nodejs": "^0.0.3",
+    "cors": "^2.8.5",
+    "date-fns-tz": "^2.0.0",
+    "dotenv": "^16.3.1",
+    "ethernet-ip": "^1.2.5",
+    "express": "^4.18.2",
+    "knex": "^2.4.2",
+    "morgan": "^1.10.0",
+    "mssql": "^9.1.1",
+    "path": "^0.12.7",
+    "pg": "^8.9.0",
+    "pm2": "^5.3.0",
+    "recipe-dashboard": "file:..",
+    "uuid": "^9.0.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "jest": "^29.6.2",
+    "nodemon": "^2.0.20",
+    "supertest": "^6.3.3"
+  }
+}
