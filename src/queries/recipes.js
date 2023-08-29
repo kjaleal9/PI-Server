@@ -1,5 +1,3 @@
-const sql = require("mssql");
-
 function getAllRecipes() {
   return ` 
     SELECT *

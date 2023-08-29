@@ -30,7 +30,7 @@ router.get("/", async (req, res) => {
     const result = await request.query(getAllRecipes());
 
     const versionToNum = result.recordsets[0].map((recipe) => {
-      return { ...recipe, Version: +recipe.Version };
+      return { ...recipe, Version: +recipe.Version, key: uuidv4() };
     });
 
     const recipesWithMaterial = versionToNum.map((recipe) => {

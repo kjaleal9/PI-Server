@@ -3,6 +3,7 @@ const cors = require("cors");
 const morgan = require("morgan");
 const path = require("path");
 
+const sampleCIPReportRouter = require("./routes/sampleCIPReport/sampleCIPReport");
 const reportCIPRouter = require("./routes/reportCIP/reportCIP");
 const recipesRouter = require("./routes/recipes/recipes");
 const materialsRouter = require("./routes/materials/materials");
@@ -18,7 +19,7 @@ const app = express();
 app.use(express.json());
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: ["http://localhost:3000", "http://localhost:3001"],
   })
 );
 // app.use(morgan("combined"));
@@ -28,6 +29,7 @@ app.use(databaseMiddleware);
 //   res.sendFile(path.join(__dirname, "..", "public", "index.html"));
 // });
 
+app.use("/api/sampleCIPReport", sampleCIPReportRouter);
 app.use("/api/reportCIP", reportCIPRouter);
 app.use("/api/recipes", recipesRouter);
 app.use("/api/materials", materialsRouter);

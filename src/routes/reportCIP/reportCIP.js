@@ -1,76 +1,73 @@
-const XLSX = require("xlsx");
-const path = require("path");
 const express = require("express");
 const router = express.Router();
-const { utcToZonedTime, format } = require("date-fns-tz");
-const targetTimezone = "America/Los_Angeles";
+const sql = require("mssql");
 
-function compareTime(a, b) {
-  const timeA = new Date(a.x);
-  const timeB = new Date(b.x);
-  return timeA - timeB;
-}
-
-const filePath = path.join(
-  __dirname,
-  "data",
-  "L1121 Process Parameter Data.xlsx"
-);
-const workbook = XLSX.readFile(filePath);
-
-const ppdataFT = XLSX.utils.sheet_to_json(workbook.Sheets["FT81160"]);
-const ppdataCT = XLSX.utils.sheet_to_json(workbook.Sheets["CT81182"]);
-const ppdataTT = XLSX.utils.sheet_to_json(workbook.Sheets["TT81182"]);
-const stepGroupChart = XLSX.utils.sheet_to_json(
-  workbook.Sheets["StepGroupChart"]
-);
-const stepGroupInfo = XLSX.utils.sheet_to_json(
-  workbook.Sheets["StepGroupInfo"]
-);
-
-let chartData = {};
-
-function convertExcelDate(dateTime) {
-  return new Date((dateTime - 25569) * 86400 * 1000);
-}
-
-chartData["FT81160"] = ppdataFT
-  .map((d) => {
-    return {
-      x: convertExcelDate(d["Time"]),
-      y: Math.floor(d["Value"]),
-    };
-  })
-  .sort(compareTime);
-
-chartData["CT81182"] = ppdataCT
-  .map((d) => {
-    return {
-      x: convertExcelDate(d["Time"]),
-      y: Math.floor(d["Value"]),
-    };
-  })
-  .sort(compareTime);
-
-chartData["TT81182"] = ppdataTT
-  .map((d) => {
-    return {
-      x: convertExcelDate(d["Time"]),
-      y: Math.floor(d["Value"]),
-    };
-  })
-  .sort(compareTime);
-
-chartData["StepGroup"] = stepGroupChart.map((stepGroup) => {
-  return {
-    StartDateTime: convertExcelDate(stepGroup["StartDateTime"]),
-    EndDateTime: convertExcelDate(stepGroup["EndDateTime"]),
-    StepGroupName: stepGroup["stepGroupName"],
-  };
-});
+// const { getCIPselect, getCIPCircuits } = require("../../queries/reportCIP.js");
 
 router.get("/", async (req, res) => {
-  res.status(200).json(chartData);
+  console.time("Load CIP Report Search");
+
+  try {
+    async function getCIPselect() {
+      const request = new sql.Request(req.db);
+      const CIPLines = await request
+        .execute("Report_General_getCIPLine")
+        .then((data) => data.recordsets[0]);
+
+      return await Promise.all(
+        CIPLines.map(async (line) => {
+          const circuits = await getCIPCircuits(line.CIPLine_Name);
+
+          const CIPCircuits = await Promise.all(
+            circuits.map(async (circuit) => {
+              console.log(circuit);
+              const units = await getCIPUnits(circuit.CIPCircuit_Name);
+
+              return {
+                circuit: circuit.CIPCircuit_Name,
+                units: units.map((unit) => unit.Equipment_Name).sort(),
+              };
+            })
+          );
+
+          return {
+            line: line.CIPLine_Name,
+            circuits: CIPCircuits,
+          };
+        })
+      );
+    }
+
+    async function getCIPCircuits(input) {
+      const request = new sql.Request(req.db);
+      return request
+        .input("CIPLine_Name", sql.NVarChar, input)
+        .execute("Report_General_getCIPCircuit")
+        .then((data) => data.recordsets[0]);
+    }
+
+    async function getCIPUnits(input) {
+      const request = new sql.Request(req.db);
+      return request
+        .input("CIPCircuit", sql.NVarChar, input)
+        .execute("Report_CIPSummary_getEquipment")
+        .then((data) => data.recordsets[0]);
+    }
+
+    function getAllData() {
+      return Promise.all([getCIPselect()]);
+    }
+
+    getAllData().then(([CIPSelect]) => {
+      res.status(200).json(CIPSelect);
+    });
+  } catch (err) {
+    res.status(500);
+    res.send(err.message);
+  }
+
+  console.timeEnd("Load CIP Report Search");
+  // res.status(200).json(chartData);
 });
 
 router.get("/step-group-info", (req, res) => {
@@ -86,7 +83,6 @@ router.get("/step-group-info", (req, res) => {
     return stepGroupInfo.filter((r) => ID === r.ID);
   });
 
-  
   // console.log(
   //   stepGroups.map((group) => {
   //     return group.reduce((prev, curr, index) => {
@@ -96,7 +92,7 @@ router.get("/step-group-info", (req, res) => {
   //         startTime: curr.StartDateTime,
   //         startStep: curr.StartStep_StepNumber,
   //         endStep: curr.EndStep_StepNumber,
-          
+
   //         [curr.ReportParameter_Description]: {
   //           startValue: curr.StartValue,
   //           endValue: curr.EndValue,
@@ -112,7 +108,7 @@ router.get("/step-group-info", (req, res) => {
   //   })
   // );
 
-  console.log(new Set)
+  console.log(new Set());
 
   let formattedData = {};
 
@@ -129,5 +125,66 @@ router.get("/step-group-info", (req, res) => {
 
   res.status(200).json(formattedData);
 });
+
+router.get("/units/:circuits", (req, res) => {
+  const request = new sql.Request(req.db);
+  console.log(req.params.circuits);
+  request.input(
+    "CIPCircuit",
+    sql.NVarChar,
+    req.params.circuits.replace(/,/g, ";;")
+  );
+
+  request.execute("Report_CIPSummary_getEquipment", (err, result) => {
+    // ... error checks
+    if (err) {
+      console.log(err);
+    }
+    // ...
+    const units = result.recordsets[0].map((unit) => unit.Equipment_Name);
+    res.status(200).json(units);
+  });
+});
+
+router.get("/CIP-data", (req, res) => {
+  const request = new sql.Request(req.db);
+  request.input("StartDateTime", "2023-07-02 12:08:09");
+  request.input("EndDateTime", "2023-07-30 12:08:09");
+  request.input("Equipment", undefined);
+  request.input("CIPCircuit", undefined);
+
+  request.execute("Report_CIPSummary_getCIP", (err, result) => {
+    // ... error checks
+    if (err) {
+      console.log(err);
+    }
+    // ...
+    res.status(200).json(result.recordsets[0]);
+  });
+});
+
+router.get(
+  "/CIP-data/:startDateTime/:endDateTime/:equipment/:circuits",
+  (req, res) => {
+    console.time("get data");
+    console.log(req.params.circuits.replace(/,/g, ";;"));
+    const request = new sql.Request(req.db);
+    request.input("StartDateTime", req.params.startDateTime);
+    request.input("EndDateTime", req.params.endDateTime);
+    request.input("Equipment", req.params.equipment.replace(/,/g, ";;"));
+    request.input("CIPCircuit", req.params.circuits.replace(/,/g, ";;"));
+
+    request.execute("Report_CIPSummary_getCIP", (err, result) => {
+      // ... error checks
+      if (err) {
+        console.log(err);
+      }
+      // ...
+      // console.log(result);
+      res.status(200).json(result.recordsets[0]);
+    });
+    console.timeEnd("get data");
+  }
+);
 
 module.exports = router;
