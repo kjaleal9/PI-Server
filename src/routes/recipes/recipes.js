@@ -11,7 +11,13 @@ const {
   ProcessClassPhase,
 } = require("../../LocalDatabase/TPMDB.js");
 
-const { getAllRecipes } = require("../../queries/recipes.js");
+const {
+  getAllRecipes,
+  getAllTrains,
+  getAllBatchEnabledProcessClasses,
+  getAllAvailableEquipmentByID,
+  getAllSelectedEquipmentByID,
+} = require("../../queries/recipes.js");
 
 // const recipes = Recipe.map((recipe) => {
 //   var matchingMaterial = Material.find((material) => {
@@ -254,6 +260,86 @@ router.get("/parameters/:BatchID/:PClassID", async (req, res) => {
     "Get parameters based on recipe ID and process class phase ID"
   );
 });
+
+router.get("/trains", async (req, res) => {
+  console.time("Get recipe trains");
+
+  try {
+    const request = new sql.Request(req.db);
+
+    const sqlTrains = await request.query(getAllTrains());
+
+    const trains = sqlTrains.recordsets[0].map((train) => {
+      return { ...train, key: uuidv4() };
+    });
+
+    res.json(trains);
+  } catch (err) {
+    res.status(500);
+    res.send(err.message);
+  }
+
+  console.timeEnd("Get recipe trains");
+});
+router.get("/trains/pClasses", async (req, res) => {
+  console.time("Get batch enabled process classes");
+
+  try {
+    const request = new sql.Request(req.db);
+
+    const sqlClasses = await request.query(getAllBatchEnabledProcessClasses());
+
+    res.json(sqlClasses.recordsets[0]);
+  } catch (err) {
+    res.status(500);
+    res.send(err.message);
+  }
+
+  console.timeEnd("Get batch enabled process classes");
+});
+
+router.get(
+  "/trains/equipment/available/:pClassID/:trainID",
+  async (req, res) => {
+    console.time("Get all available equipment by ID");
+
+    try {
+      const request = new sql.Request(req.db);
+
+      const availableEquipment = await request.query(
+        getAllAvailableEquipmentByID(req.params.pClassID, req.params.trainID)
+      );
+
+      res.json(availableEquipment.recordsets[0]);
+    } catch (err) {
+      res.status(500);
+      res.send(err.message);
+    }
+
+    console.timeEnd("Get all available equipment by ID");
+  }
+);
+router.get(
+  "/trains/equipment/selected/:pClassID/:trainID",
+  async (req, res) => {
+    console.time("Get all selected equipment by ID");
+
+    try {
+      const request = new sql.Request(req.db);
+
+      const selectedEquipment = await request.query(
+        getAllSelectedEquipmentByID(req.params.pClassID, req.params.trainID)
+      );
+
+      res.json(selectedEquipment.recordsets[0]);
+    } catch (err) {
+      res.status(500);
+      res.send(err.message);
+    }
+
+    console.timeEnd("Get all selected equipment by ID");
+  }
+);
 
 // POST add a new recipe
 router.post("/", (req, res) => {
