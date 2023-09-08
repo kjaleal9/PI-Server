@@ -14,13 +14,12 @@ router.get("/", async (req, res) => {
         .execute("Report_General_getCIPLine")
         .then((data) => data.recordsets[0]);
 
-      return await Promise.all(
+      return Promise.all(
         CIPLines.map(async (line) => {
           const circuits = await getCIPCircuits(line.CIPLine_Name);
 
           const CIPCircuits = await Promise.all(
             circuits.map(async (circuit) => {
-              console.log(circuit);
               const units = await getCIPUnits(circuit.CIPCircuit_Name);
 
               return {
@@ -38,7 +37,7 @@ router.get("/", async (req, res) => {
       );
     }
 
-    async function getCIPCircuits(input) {
+    function getCIPCircuits(input) {
       const request = new sql.Request(req.db);
       return request
         .input("CIPLine_Name", sql.NVarChar, input)
@@ -46,7 +45,7 @@ router.get("/", async (req, res) => {
         .then((data) => data.recordsets[0]);
     }
 
-    async function getCIPUnits(input) {
+    function getCIPUnits(input) {
       const request = new sql.Request(req.db);
       return request
         .input("CIPCircuit", sql.NVarChar, input)
@@ -60,14 +59,11 @@ router.get("/", async (req, res) => {
 
     getAllData().then(([CIPSelect]) => {
       res.status(200).json(CIPSelect);
+      console.timeEnd("Load CIP Report Search");
     });
   } catch (err) {
-    res.status(500);
-    res.send(err.message);
+    res.status(500).send(err.message);
   }
-
-  console.timeEnd("Load CIP Report Search");
-  // res.status(200).json(chartData);
 });
 
 router.get("/step-group-info", (req, res) => {
@@ -128,7 +124,6 @@ router.get("/step-group-info", (req, res) => {
 
 router.get("/units/:circuits", (req, res) => {
   const request = new sql.Request(req.db);
-  console.log(req.params.circuits);
   request.input(
     "CIPCircuit",
     sql.NVarChar,
@@ -136,11 +131,6 @@ router.get("/units/:circuits", (req, res) => {
   );
 
   request.execute("Report_CIPSummary_getEquipment", (err, result) => {
-    // ... error checks
-    if (err) {
-      console.log(err);
-    }
-    // ...
     const units = result.recordsets[0].map((unit) => unit.Equipment_Name);
     res.status(200).json(units);
   });
@@ -154,11 +144,6 @@ router.get("/CIP-data", (req, res) => {
   request.input("CIPCircuit", undefined);
 
   request.execute("Report_CIPSummary_getCIP", (err, result) => {
-    // ... error checks
-    if (err) {
-      console.log(err);
-    }
-    // ...
     res.status(200).json(result.recordsets[0]);
   });
 });
@@ -175,12 +160,6 @@ router.get(
     request.input("CIPCircuit", req.params.circuits.replace(/,/g, ";;"));
 
     request.execute("Report_CIPSummary_getCIP", (err, result) => {
-      // ... error checks
-      if (err) {
-        console.log(err);
-      }
-      // ...
-      // console.log(result);
       res.status(200).json(result.recordsets[0]);
     });
     console.timeEnd("get data");

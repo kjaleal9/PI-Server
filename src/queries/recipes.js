@@ -5,7 +5,7 @@ function getAllRecipes() {
     `;
 }
 
-function getSingleRecipe(version, RID) {
+function getSingleRecipe(RID, ver) {
   return `
     SELECT 
       ID,
@@ -22,9 +22,112 @@ function getSingleRecipe(version, RID) {
       ProcessClass_ID
     FROM TPIBK_RecipeBatchData
     WHERE Recipe_RID = '${RID}' 
-      AND Recipe_Version = ${+version}
+      AND Recipe_Version = ${+ver}
     ORDER BY step
     `;
+}
+
+function getRecipeProcedure(RID, ver) {
+  return ` 
+  SELECT 
+    ID,
+    Step,
+    Message,
+    TPIBK_StepType_ID,
+    ProcessClassPhase_ID,
+    Step AS Step1,
+    UserString,
+    RecipeEquipmentTransition_Data_ID,
+    NextStep,
+    Allocation_Type_ID,
+    LateBinding,
+    Material_ID,
+    ProcessClass_ID 
+  FROM v_TPIBK_RecipeBatchData 
+  WHERE Recipe_RID = '${RID}' 
+  AND Recipe_Version = ${+ver}
+  ORDER BY Step`;
+}
+
+function getRecipeProcedureCondensed(RID, ver) {
+  return `  
+  SELECT 
+    Step,
+    Message
+  FROM v_TPIBK_RecipeBatchData 
+  WHERE Recipe_RID = '${RID}' 
+  AND Recipe_Version = ${+ver}
+  ORDER BY Step`;
+}
+
+function getStepTypes() {
+  return `  
+  SELECT 
+    ID,
+    Name 
+  FROM TPIBK_StepType 
+  ORDER BY ID
+`;
+}
+
+function getRecipeParameters(BatchID, PClassID) {
+  return `  
+  SELECT 
+    ID, 
+    Name, 
+    Description, 
+    TPIBK_RecipeParameters_ID, 
+    ProcessClassPhase_ID, 
+    ValueType, 
+    Scaled, 
+    MinValue, 
+    MaxValue, 
+    DefValue,
+    IsMaterial, 
+    MAX(TPIBK_RecipeParameterData_ID) AS TPIBK_RecipeParameterData_ID, 
+    SUM(Value) AS Value, 
+    MAX(TPIBK_RecipeStepData_ID) AS TPIBK_RecipeStepData_ID, 
+    DefEU, 
+    Max(EU) As EU
+  FROM v_TPIBK_RecipeParameters
+  WHERE (TPIBK_RecipeBatchData_ID IN (0, ${BatchID}))
+  GROUP BY 
+    ID, 
+    Name, 
+    Description, 
+    TPIBK_RecipeParameters_ID, 
+    ProcessClassPhase_ID, 
+    ValueType, 
+    MinValue, 
+    MaxValue, 
+    DefValue, 
+    Scaled,
+    IsMaterial, 
+    DefEU
+  HAVING (ProcessClassPhase_ID = ${PClassID}) 
+  ORDER BY Description`;
+}
+
+function getRequiredProcessClasses(RID, ver) {
+  return `  
+  SELECT 
+  RER.ID, 
+  RER.ProcessClass_Name, 
+  IsMainBatchUnit,
+  CASE WHEN ROW_NUMBER() 
+      OVER(PARTITION BY RER.ProcessClass_Name ORDER BY RER.ProcessClass_Name) <2 
+      THEN RER.ProcessClass_Name 
+      ELSE RER.ProcessClass_Name+' #'+LTRIM(
+          ROW_NUMBER() 
+          OVER(PARTITION BY RER.ProcessClass_Name ORDER BY RER.ProcessClass_Name)) 
+          END AS Message,PC.ID as PClass_ID,
+  CASE COALESCE(Equipment_Name,PC.Description) When '' 
+      THEN PC.Description 
+      ELSE Equipment_Name 
+      END AS Equipment_Name
+  FROM RecipeEquipmentRequirement RER INNER JOIN ProcessClass PC ON RER.ProcessClass_Name = PC.Name
+  WHERE Recipe_RID = '${RID}' AND Recipe_Version = ${+ver}
+`;
 }
 
 function getAllTrains() {
@@ -82,6 +185,11 @@ function getAllSelectedEquipmentByID(pClassID, trainID) {
 module.exports = {
   getAllRecipes,
   getSingleRecipe,
+  getRecipeProcedure,
+  getRecipeProcedureCondensed,
+  getStepTypes,
+  getRecipeParameters,
+  getRequiredProcessClasses,
   getAllTrains,
   getAllBatchEnabledProcessClasses,
   getAllAvailableEquipmentByID,
