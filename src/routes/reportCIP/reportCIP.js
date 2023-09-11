@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const sql = require("mssql");
+const dayjs = require("dayjs");
 
 // const { getCIPselect, getCIPCircuits } = require("../../queries/reportCIP.js");
 
@@ -138,11 +139,13 @@ router.get("/units/:circuits", (req, res) => {
 
 router.get("/CIP-data", (req, res) => {
   const request = new sql.Request(req.db);
-  request.input("StartDateTime", "2023-07-02 12:08:09");
-  request.input("EndDateTime", "2023-07-30 12:08:09");
+  request.input("StartDateTime", dayjs().format("YYYY-MM-DD HH:mm:ss"));
+  request.input(
+    "EndDateTime",
+    dayjs().subtract(7, "day").format("YYYY-MM-DD HH:mm:ss")
+  );
   request.input("Equipment", undefined);
   request.input("CIPCircuit", undefined);
-
   request.execute("Report_CIPSummary_getCIP", (err, result) => {
     res.status(200).json(result.recordsets[0]);
   });
@@ -151,19 +154,26 @@ router.get("/CIP-data", (req, res) => {
 router.get(
   "/CIP-data/:startDateTime/:endDateTime/:equipment/:circuits",
   (req, res) => {
+    const { startDateTime, endDateTime, equipment, circuits } = req.params;
     console.time("get data");
-    console.log(req.params.circuits.replace(/,/g, ";;"));
+    console.log(startDateTime, endDateTime);
     const request = new sql.Request(req.db);
-    request.input("StartDateTime", req.params.startDateTime);
-    request.input("EndDateTime", req.params.endDateTime);
-    request.input("Equipment", req.params.equipment.replace(/,/g, ";;"));
-    request.input("CIPCircuit", req.params.circuits.replace(/,/g, ";;"));
-
+    request.input("StartDateTime", startDateTime);
+    request.input("EndDateTime", endDateTime);
+    request.input(
+      "Equipment",
+      equipment !== "undefined" ? equipment.replace(/,/g, ";;") : undefined
+    );
+    request.input(
+      "CIPCircuit",
+      circuits !== "undefined" ? circuits.replace(/,/g, ";;") : undefined
+    );
     request.execute("Report_CIPSummary_getCIP", (err, result) => {
       res.status(200).json(result.recordsets[0]);
     });
     console.timeEnd("get data");
   }
 );
+
 
 module.exports = router;

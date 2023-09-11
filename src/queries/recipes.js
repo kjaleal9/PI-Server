@@ -182,9 +182,31 @@ function getAllSelectedEquipmentByID(pClassID, trainID) {
       ORDER BY Equipment_Name`;
 }
 
+function insertNewRecipe(
+  RID,
+  Version,
+  VersionDate,
+  Description,
+  ProductID,
+  BSNom,
+  BSMin,
+  BSMax
+) {
+  return `INSERT INTO [Recipe] 
+            ([RID],[Version],[RecipeType],[NbrOfExecutions],[VersionDate],[Description],[EffectiveDate],[ExpirationDate],[ProductID],[BatchSizeNominal],[BatchSizeMin],[BatchSizeMax],[Status],[UseBatchKernel],[CurrentElementID],[RecipeData],[RunMode],[IsPackagingRecipeType])
+    Values('${RID}','${Version}','Master', NULL,'${VersionDate}','${Description}', NULL, NULL,'${ProductID}',${BSNom},${BSMin},${BSMax},'Registered', 1, NULL, NULL, 0, 0)`;
+}
+
+function deleteRecipe(RID, Version) {
+  return `DELETE [dbo].[Recipe]
+          WHERE RID='${RID}' and Version=${Version}`;
+}
+
 module.exports = {
   getAllRecipes,
   getSingleRecipe,
+  insertNewRecipe,
+  deleteRecipe,
   getRecipeProcedure,
   getRecipeProcedureCondensed,
   getStepTypes,

@@ -1,6 +1,7 @@
 const sql = require("mssql");
 const { v4: uuidv4 } = require("uuid");
 const express = require("express");
+const dayjs = require("dayjs");
 const router = express.Router();
 
 const {
@@ -15,6 +16,8 @@ const {
   getStepTypes,
   getRecipeParameters,
   getRequiredProcessClasses,
+  insertNewRecipe,
+  deleteRecipe,
 } = require("../../queries/recipes.js");
 
 const { getAllMaterials } = require("../../queries/materials.js");
@@ -31,7 +34,12 @@ router.get("/", async (req, res) => {
       .query(getAllRecipes())
       .then((data) => data.recordsets[0]);
     const versionToNum = recipes.map((recipe) => {
-      return { ...recipe, Version: +recipe.Version, key: uuidv4() };
+      return {
+        ...recipe,
+        Version: +recipe.Version,
+        key: uuidv4(),
+        VersionDate: dayjs(recipe.VersionDate).format("DD/MM/YYYY"),
+      };
     });
     const recipesWithMaterial = versionToNum.map((recipe) => {
       var matchingMaterial = materials.find((material) => {
@@ -266,24 +274,54 @@ router.get(
 );
 
 // POST add a new recipe
-router.post("/", (req, res) => {
-  console.log("sdf");
+router.post("/", async (req, res) => {
   console.log(req.body);
-  res.status(200).json({ message: "Complete" });
+  const {
+    RID,
+    Version,
+    VersionDate,
+    Description,
+    ProductID,
+    BSNom,
+    BSMin,
+    BSMax,
+  } = req.body;
+
+  try {
+    const request = new sql.Request(req.db);
+
+    const selectedEquipment = await request.query(
+      insertNewRecipe(
+        RID,
+        Version,
+        VersionDate,
+        Description,
+        ProductID,
+        BSNom,
+        BSMin,
+        BSMax
+      )
+    );
+
+    res.status(200).json({ message: "Recipe Added" });
+  } catch (err) {
+    console.log(err);
+    res.status(500).send(err.message);
+  }
 });
 
 // DELETE a recipe with RID and version in the request body
-router.delete("/", (req, res) => {
+router.delete("/", async (req, res) => {
   console.time("Delete recipe");
-
-  if (enviornment === "Local") {
-    const deleteIndex = recipes.recipes.findIndex(
-      (recipe) =>
-        recipe.RID === req.body.RID && recipe.Version === req.body.Version
-    );
-
-    recipes.splice(deleteIndex, 1);
-    res.json(recipes);
+  const { RID, Version } = req.body;
+  try {
+    const request = new sql.Request(req.db);
+    const recipe = await request
+      .query(deleteRecipe(RID, Version))
+      .then((data) => console.log(data));
+    res.status(200).json({ message: "Recipe Deleted" });
+  } catch (err) {
+    res.status(500).err(err);
   }
 
   console.timeEnd("Delete recipe");
