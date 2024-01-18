@@ -7,7 +7,8 @@ const server = http.createServer(app);
 
 async function startServer() {
   await createConnectionPool();
-
+  console.log("Running Server");
+  console.log("Worker process has started");
   server.listen(process.env.PORT || 5000, () => {
     const host = server.address().address;
     const port = server.address().port;

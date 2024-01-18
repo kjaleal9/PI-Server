@@ -6,7 +6,7 @@ const dayjs = require("dayjs");
 // const { getCIPselect, getCIPCircuits } = require("../../queries/reportCIP.js");
 
 router.get("/", async (req, res) => {
-  console.time("Load CIP Report Search");
+  // console.time("Load CIP Report Search");
 
   try {
     async function getCIPselect() {
@@ -60,7 +60,7 @@ router.get("/", async (req, res) => {
 
     getAllData().then(([CIPSelect]) => {
       res.status(200).json(CIPSelect);
-      console.timeEnd("Load CIP Report Search");
+      // console.timeEnd("Load CIP Report Search");
     });
   } catch (err) {
     res.status(500).send(err.message);
@@ -147,6 +147,7 @@ router.get("/CIP-data", (req, res) => {
   request.input("Equipment", undefined);
   request.input("CIPCircuit", undefined);
   request.execute("Report_CIPSummary_getCIP", (err, result) => {
+    console.log(err);
     res.status(200).json(result.recordsets[0]);
   });
 });
@@ -174,6 +175,5 @@ router.get(
     console.timeEnd("get data");
   }
 );
-
 
 module.exports = router;

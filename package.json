@@ -6,7 +6,8 @@
   "scripts": {
     "start": "set PORT=5000 && nodemon src/server.js",
     "test": "jest",
-    "test-watch": "jest --watchAll"
+    "test-watch": "jest --watchAll",
+    "cluster":"pm2 start src/server.js -i 2"
   },
   "author": "",
   "license": "ISC",

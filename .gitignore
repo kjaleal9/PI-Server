@@ -9,6 +9,7 @@
 # production
 /build
 /LocalDatabase
+/public
 
 # misc
 .env

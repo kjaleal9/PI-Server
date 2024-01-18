@@ -34,6 +34,7 @@ async function createConnectionPool() {
     console.error("Error creating Connection Pool", err);
   }
 }
+
 async function closeConnectionPool() {
   try {
     await appPool.close();

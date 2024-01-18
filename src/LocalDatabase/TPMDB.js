@@ -1,7 +1,9 @@
 const XLSX = require("xlsx");
 const path = require('path')
 const filePath = path.join(__dirname,'TPMDB.xlsx')
+const batchTimePath = path.join(__dirname,'batchTimes.xlsx')
 const workbook = XLSX.readFile(filePath);
+const batchTimesWorkbook = XLSX.readFile(batchTimePath)
 
 const Equipment = XLSX.utils.sheet_to_json(workbook.Sheets["Equipment"]);
 const EquipmentMode = XLSX.utils.sheet_to_json(
@@ -63,6 +65,10 @@ const TPIBK_StepType = XLSX.utils.sheet_to_json(
   workbook.Sheets["TPIBK_StepType"]
 );
 
+const batchTimes = XLSX.utils.sheet_to_json(
+  batchTimesWorkbook.Sheets["batchTimes"]
+);
+
 module.exports = {
   Equipment,
   EquipmentMode,
@@ -89,4 +95,5 @@ module.exports = {
   TPIBK_RecipeParameters,
   TPIBK_RecipeStepData,
   TPIBK_StepType,
+  batchTimes
 };
